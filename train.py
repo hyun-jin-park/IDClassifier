@@ -27,6 +27,8 @@ def load_dataset(args, mode):
         ])
     else:
         data_transforms = transforms.Compose([
+            transforms.ColorJitter(0.5, 0.5, 0.5, 0.5), transforms.RandomGrayscale(p=0.05),
+            transforms.RandomApply([transforms.GaussianBlur(kernel_size=3)], p=0.5),
             transforms.RandomRotation((-90, 90)),
             transforms.RandomHorizontalFlip(),
             transforms.Resize((512, 512)),
@@ -37,7 +39,6 @@ def load_dataset(args, mode):
     dataset = datasets.ImageFolder(os.path.join(args.data_dir, mode), data_transforms)
     dataloader = DataLoader(dataset, batch_size=args.train_batch_size, shuffle=True, num_workers=16)
     data_set_size = len(dataset)
-
     return dataloader, data_set_size
 
 
@@ -54,7 +55,7 @@ def test(model, args):
         if not os.path.exists(output_path):
             os.mkdir(output_path)
 
-    for file_path in glob.glob(args.test_dir + '/*.jpg'):
+    for file_path in tqdm(glob.glob(args.test_dir + '/*.jpg')):
         file_name = os.path.basename(file_path)
         im = Image.open(file_path)
         im = im.convert('RGB')
@@ -161,41 +162,44 @@ if __name__ == '__main__':
     parser.add_argument('--do_eval', action='store_true')
     parser.add_argument('--do_test', action='store_true')
     parser.add_argument('--test_dir', type=str, default='/home/embian/Workspace/data/images/val/ALIEN_REGISTRATION/')
-    parser.add_argument('--n_epoch', type=int, default=200)
-    parser.add_argument("--train_batch_size", type=int, default=128)
-    parser.add_argument("--eval_batch_size", type=int, default=128)
+    parser.add_argument('--n_epoch', type=int, default=5)
+    parser.add_argument("--train_batch_size", type=int, default=16)
+    parser.add_argument("--eval_batch_size", type=int, default=16)
     parser.add_argument("--data_dir", type=str, default="/home/embian/Workspace/data/images/Classification")
     parser.add_argument('--output_dir', type=str, default='./output')
     parser.add_argument('--result_dir', type=str, default='result/')
-    # parser.add_argument('--from_checkpoint', type=str, default='./final/resnet50_512_99.7.pth')
-    # parser.add_argument('--from_checkpoint', type=str, default='./output/19-36-54-86_model.bin')
-    parser.add_argument('--from_checkpoint', type=str)
+    # parser.add_argument('--from_checkpoint', type=str, default='./final/resnet101_512_99.9.pth')
+    parser.add_argument('--from_checkpoint', type=str, default='./output/12-41-19-4_model.bin')
+    # parser.add_argument('--from_checkpoint', type=str)
     parser.add_argument('--num_class', type=int, default=6)
-    parser.add_argument('--lr', type=float, default=0.001)
-    parser.add_argument('--freeze_head', type=bool, default=True)
+    parser.add_argument('--lr', type=float, default=0.0001)
+    parser.add_argument('--freeze_head', type=bool, default=False)
 
     main_args = parser.parse_args()
     if main_args.from_checkpoint:
         main_model = torch.nn.DataParallel(BasicClassifier(main_args.num_class, hidden=512,
                                                            freeze_head=main_args.freeze_head))
         main_model.load_state_dict(torch.load(main_args.from_checkpoint))
+
+        # main_model = BasicClassifier(main_args.num_class, hidden=512, freeze_head=main_args.freeze_head)
+        # main_model.load_state_dict(torch.load(main_args.from_checkpoint))
+        # main_model = torch.nn.DataParallel(main_model)
+
     else:
         main_model = torch.nn.DataParallel(BasicClassifier(main_args.num_class, hidden=512, freeze_head=True))
     main_model.cuda()
 
     if main_args.do_train:
         check_point = train(main_model, main_args)
-
-        main_args.lr = main_args.lr / 8
-        main_args.train_batch_size = int(main_args.train_batch_size / 4)
-        main_args.eval_batch_size = int(main_args.eval_batch_size / 4)
-        main_model = torch.nn.DataParallel(BasicClassifier(main_args.num_class, hidden=512, freeze_head=False))
-        main_model.load_state_dict(torch.load(check_point))
+        # main_args.lr = main_args.lr / 8
+        # main_args.train_batch_size = int(main_args.train_batch_size / 4)
+        # main_args.eval_batch_size = int(main_args.eval_batch_size / 4)
+        # main_model = torch.nn.DataParallel(BasicClassifier(main_args.num_class, hidden=512, freeze_head=False))
+        # main_model.load_state_dict(torch.load(check_point))
         check_point = train(main_model, main_args)
         main_model.load_state_dict(torch.load(check_point))
 
     if main_args.do_eval:
-
         evaluate(main_model, main_args, main_args.n_epoch, visualize=True)
 
     if main_args.do_test:

@@ -6,8 +6,8 @@ import torchvision.models as models
 class BasicClassifier (torch.nn.Module):
     def __init__(self,  n_class, hidden=512, pretrained=True, freeze_head=True):
         super().__init__()
-        # self.backbone = models.resnet101(pretrained=pretrained)
-        self.backbone = models.resnet50(pretrained=pretrained)
+        self.backbone = models.resnet101(pretrained=pretrained)
+        # self.backbone = models.resnet50(pretrained=pretrained)
         if freeze_head :
             for param in self.backbone.parameters():
                  param.requires_grad = False
