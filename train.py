@@ -37,7 +37,6 @@ def load_dataset(args, mode):
     dataset = datasets.ImageFolder(os.path.join(args.data_dir, mode), data_transforms)
     dataloader = DataLoader(dataset, batch_size=args.train_batch_size, shuffle=True, num_workers=16)
     data_set_size = len(dataset)
-
     return dataloader, data_set_size
 
 

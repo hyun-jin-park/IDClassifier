@@ -3,14 +3,15 @@ from torch.nn import CrossEntropyLoss, Linear
 import torchvision.models as models
 
 
-class BasicClassifier (torch.nn.Module):
-    def __init__(self,  n_class, hidden=512, pretrained=True, freeze_head=True):
+class BasicClassifier(torch.nn.Module):
+    def __init__(self, n_class, hidden=512, pretrained=True, freeze_head=True):
         super().__init__()
-        # self.backbone = models.resnet101(pretrained=pretrained)
-        self.backbone = models.resnet50(pretrained=pretrained)
-        if freeze_head :
+        self.backbone = models.resnet101(pretrained=pretrained)
+        # self.backbone = models.resnet50(pretrained=pretrained)
+
+        if freeze_head:
             for param in self.backbone.parameters():
-                 param.requires_grad = False
+                param.requires_grad = False
         self.backbone.fc = Linear(self.backbone.fc.in_features, hidden)
         self.fc = Linear(hidden, n_class)
         self.loss = CrossEntropyLoss()
@@ -24,5 +25,3 @@ class BasicClassifier (torch.nn.Module):
         if labels is not None:
             loss = self.loss(outputs, labels)
         return outputs, loss
-
-
